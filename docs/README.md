@@ -104,4 +104,3 @@
 
 - [MiniShop3 — документация](https://docs.modx.pro/components/minishop3/)  
 - [События MiniShop3 (стоимость)](https://docs.modx.pro/components/minishop3/development/events/cost)
-- [MiniShop3 — resolver метрик](https://github.com/modx-pro/MiniShop3/blob/beta/_build/resolvers/resolver_06_metrics.php) — образец, по которому реализован резолвер в дополнении (`_build/resolvers/resolver_metrics.php`): обезличенная отправка данных окружения при установке/обновлении на metrics.modx.pro
