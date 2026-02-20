@@ -1,0 +1,16 @@
+Changelog — First-Time Buyer Discount
+
+[1.0.0-pl] - 2025-02-20
+
+Added
+- Плагин ms3FirstTimeBuyerDiscount на событие msOnGetCartCost
+- Сервис FtbDiscountService: isEligible, getPaidOrdersCount, calculateDiscount, apply
+- Системные настройки: ftb_enabled, ftb_discount_type, ftb_discount_value, ftb_allow_combination
+- События для расширения: ftbOnBeforeApply, ftbOnApply
+- Логирование применения скидки в лог MODX (категория ftb)
+- Документация и раздел «Расширение» для разработчиков
+
+Requirements
+- MODX Revolution 3.x
+- PHP 8.1+
+- MiniShop3

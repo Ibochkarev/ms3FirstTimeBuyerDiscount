@@ -1,0 +1,16 @@
+{
+    "name": "ms3firsttimebuyerdiscount/ms3firsttimebuyerdiscount",
+    "description": "First-Time Buyer Discount for MiniShop3 / MODX 3",
+    "type": "library",
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ms3FirstTimeBuyerDiscount\\": "src/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
