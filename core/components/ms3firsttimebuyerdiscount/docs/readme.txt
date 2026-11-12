@@ -1,53 +1,31 @@
-First-Time Buyer Discount для MiniShop3 (MODX Revolution 3.x)
+First-Time Buyer Discount для MiniShop3
 
-Автоматическая скидка к первому заказу пользователя: при 0 оплаченных заказов к стоимости корзины применяется скидка (процент или фиксированная сумма). Оплаченные заказы определяются по настройке MiniShop3 ms3_status_for_stat.
+Автоматическая скидка на первый заказ: при 0 оплаченных заказов к стоимости корзины применяется скидка (процент или фиксированная сумма). Учёт по user_id или по email/телефону для гостей.
 
-Требования
-- MODX Revolution 3.x
-- PHP 8.1+
-- MiniShop3
+Requirements:
+- MODX >= 3.0.0
+- PHP >= 8.1.0
+- MiniShop3 (события корзины, модель msOrder, настройка ms3_status_for_stat)
 
-Установка
-Установите пакет через Менеджер пакетов (Extras → Installer). Включите плагин ms3FirstTimeBuyerDiscount и настройте системные параметры в Настройках → ms3FirstTimeBuyerDiscount.
+Installation:
+1. Установите пакет через Менеджер пакетов (Extras → Installer).
+2. Убедитесь, что MiniShop3 установлен и настроен (корзина, заказы, статусы).
+3. Включите плагин ms3FirstTimeBuyerDiscount и привяжите к событию msOnGetCartCost.
+4. Настройте параметры в Настройках → ms3firsttimebuyerdiscount.
+
+Features:
+- Скидка на первый заказ — процент или фиксированная сумма, применяется при расчёте корзины (msOnGetCartCost)
+- Учёт по user_id — для авторизованных; по email/телефону — для гостей (черновик заказа, Address)
+- Плашка на странице заказа — сниппет [[!ms3ftbDiscountBanner]], стиль «чек», экономия и подсказка
+- Скрытие плашки — при смене email/phone запрос к eligible.php; плашка скрывается, если по контакту есть оплаченные заказы
+- События для расширения — ftbOnBeforeApply (отмена/подмена суммы), ftbOnApply (логирование, аналитика)
+- Подмена сервиса — регистрация своего класса под ключом ms3ftb_discount до первого вызова
 
 Системные настройки (namespace: ms3firsttimebuyerdiscount)
 - ms3firsttimebuyerdiscount_ftb_enabled — включить скидку (да/нет)
-- ms3firsttimebuyerdiscount_ftb_discount_type — тип: percent или fixed
-- ms3firsttimebuyerdiscount_ftb_discount_value — значение (процент или сумма)
-- ms3firsttimebuyerdiscount_ftb_allow_combination — разрешить комбинирование с другими скидками
+- ms3firsttimebuyerdiscount_ftb_discount_type — percent или fixed
+- ms3firsttimebuyerdiscount_ftb_discount_value — значение (процент или сумма в валюте)
+- ms3firsttimebuyerdiscount_ftb_allow_combination — разрешить совмещение с другими скидками корзины
 
-Логика
-Плагин подписан на событие MiniShop3 msOnGetCartCost. Если пользователь авторизован (user_id != 0), количество оплаченных заказов (по ms3_status_for_stat) равно 0 и скидка включена — к переданной стоимости корзины применяется скидка. Результат возвращается через returnedValues['cost']. Применение логируется в лог MODX (категория ftb).
-
-Расширение (для разработчиков)
-
-1) Подмена сервиса
-Сервис регистрируется в контейнере MODX под именем ms3ftb_discount (класс Ms3FirstTimeBuyerDiscount\Services\FtbDiscountService). Чтобы подменить логику своей реализацией, зарегистрируйте свой класс до первого вызова (например, в плагине на событие OnMODXInit):
-
-  $modx->services->add('ms3ftb_discount', function ($c) use ($modx) {
-      return new \YourNamespace\YourFtbService($modx);
-  });
-
-Либо наследуйте FtbDiscountService и переопределите методы isEligible(), getPaidOrdersCount() или calculateDiscount().
-
-2) События
-- ftbOnBeforeApply — вызывается после проверки «подходит ли пользователь», до расчёта скидки.
-  Параметры: user_id, cost, draft, cart, settings.
-  Отмена: в плагине установите $modx->event->returnedValues['apply'] = false.
-  Подмена суммы до скидки: $modx->event->returnedValues['cost'] = ваша_сумма.
-
-- ftbOnApply — вызывается после успешного применения скидки.
-  Параметры: user_id, cost_before, cost_after, discount_amount, draft.
-  Используйте для логирования, аналитики или интеграций.
-
-3) Пример плагина на ftbOnBeforeApply (отмена скидки для группы пользователей)
-  case 'ftbOnBeforeApply':
-      $userId = $scriptProperties['user_id'];
-      $user = $modx->getObject(\MODX\Revolution\modUser::class, $userId);
-      if ($user && $user->isMember('NoFtbGroup')) {
-          $modx->event->returnedValues['apply'] = false;
-      }
-      break;
-
-Контакты и ссылки
-- Документация MiniShop3: https://docs.modx.pro/components/minishop3/
+Плашка на странице заказа
+В шаблоне страницы оформления заказа добавьте [[!ms3ftbDiscountBanner]]. Плашка выводится при загрузке, если пользователь подходит под условия; при изменении email/phone скрывается по ответу eligible.php. Стили в ftb-banner.css подключаются плагином. Тексты: ftb_discount_banner_title, ftb_discount_banner_savings_label, ftb_discount_banner_hint.

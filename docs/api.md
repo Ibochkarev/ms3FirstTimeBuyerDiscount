@@ -2,7 +2,7 @@
 
 ## Сервис FtbDiscountService
 
-**Класс:** `Ms3FirstTimeBuyerDiscount\Services\FtbDiscountService`  
+**Класс:** `Ms3FirstTimeBuyerDiscount\Services\FtbDiscountService`
 **Ключ в контейнере:** `ms3ftb_discount`
 
 ### Конструктор
@@ -15,7 +15,7 @@ public function __construct(modX $modx)
 
 #### isEligible
 
-Проверяет, можно ли применить скидку: включена настройка, пользователь задан, 0 оплаченных заказов.
+Проверяет право на скидку: настройка включена, 0 оплаченных заказов. Для авторизованных — по `userId`; для гостей — по email/телефону из `draft` (Address).
 
 ```php
 public function isEligible(int $userId, ?object $draft = null): bool
@@ -32,15 +32,16 @@ public function isEligible(int $userId, ?object $draft = null): bool
 
 #### getPaidOrdersCount
 
-Количество заказов пользователя в статусах из настройки MiniShop3 `ms3_status_for_stat`.
+Количество оплаченных заказов пользователя (статусы из `ms3_status_for_stat`). Второй параметр исключает заказ из подсчёта (например, текущий черновик).
 
 ```php
-public function getPaidOrdersCount(int $userId): int
+public function getPaidOrdersCount(int $userId, int $excludeOrderId = 0): int
 ```
 
 | Параметр | Тип | Описание |
 |----------|-----|----------|
 | `userId` | int | ID пользователя |
+| `excludeOrderId` | int | ID заказа, не учитывать в подсчёте (0 — не исключать) |
 
 **Возврат:** число заказов (0 и больше).
 
@@ -134,8 +135,8 @@ public function apply(array $scriptProperties): ?float
 | Ключ | xtype | По умолчанию | Описание |
 |------|--------|--------------|----------|
 | `ftb_enabled` | combo-boolean | true | Включить скидку для первых покупок |
-| `ftb_discount_type` | list | percent | Тип: `percent` (процент) или `fixed` (фиксированная сумма) |
+| `ftb_discount_type` | textfield | percent | Тип: `percent` (процент) или `fixed` (фиксированная сумма). Ввод вручную; сравнение без учёта регистра. |
 | `ftb_discount_value` | number | 10 | Значение: процент (0–100) или сумма в валюте |
-| `ftb_allow_combination` | combo-boolean | true | Зарезервировано для совмещения с другими скидками |
+| `ftb_allow_combination` | combo-boolean | true | Разрешить совмещение с другими скидками корзины (если false и в корзине уже есть скидка, FTB не применяется) |
 
-Получение в коде: `$modx->getOption('ms3firsttimebuyerdiscount_ftb_enabled', null, true)`.
+**В коде:** `$modx->getOption('ms3firsttimebuyerdiscount_ftb_enabled', null, true)`.

@@ -8,4 +8,5 @@ $baseDir = dirname($vendorDir);
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'Ms3FirstTimeBuyerDiscount\\Services\\FtbDiscountService' => $baseDir . '/src/Services/FtbDiscountService.php',
+    'Ms3FirstTimeBuyerDiscount\\Transport\\EncryptedVehicle' => $baseDir . '/src/Transport/EncryptedVehicle.php',
 );

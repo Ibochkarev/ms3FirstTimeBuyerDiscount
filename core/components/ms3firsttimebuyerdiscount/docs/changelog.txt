@@ -1,16 +1,21 @@
-Changelog — First-Time Buyer Discount
+# Changelog
 
-[1.0.0-pl] - 2025-02-20
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-Added
+## [1.0.0-pl] - 2025-03-02
+
+### Added
+
+- Плашка на странице заказа: сниппет `ms3ftbDiscountBanner`, чанк `ms3ftb_discount_banner.tpl`, CSS `ftb-banner.css` (стиль «чек»)
+- Endpoint `eligible.php` для проверки eligibility по email/phone
+- Лексикон `ftb_discount_banner_hint` — подсказка «Заполните email или телефон — скидка применится автоматически»
+- Скрытие плашки при смене email/phone, если по контакту уже есть оплаченные заказы
 - Плагин ms3FirstTimeBuyerDiscount на событие msOnGetCartCost
 - Сервис FtbDiscountService: isEligible, getPaidOrdersCount, calculateDiscount, apply
 - Системные настройки: ftb_enabled, ftb_discount_type, ftb_discount_value, ftb_allow_combination
 - События для расширения: ftbOnBeforeApply, ftbOnApply
-- Логирование применения скидки в лог MODX (категория ftb)
-- Документация и раздел «Расширение» для разработчиков
 
-Requirements
-- MODX Revolution 3.x
-- PHP 8.1+
-- MiniShop3
+
+### Changed
+
+- Плашка: иконка ценника (SVG), градиентный акцент, подсказка для пользователя

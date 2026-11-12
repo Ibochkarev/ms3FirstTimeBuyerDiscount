@@ -6,8 +6,12 @@ use MODX\Revolution\modSystemSetting;
 use MODX\Revolution\modMenu;
 use MODX\Revolution\modPlugin;
 use MODX\Revolution\modPluginEvent;
+use MODX\Revolution\modSnippet;
 use MODX\Revolution\Transport\modPackageBuilder;
 use MODX\Revolution\Transport\modTransportPackage;
+use xPDO\Transport\xPDOFileVehicle;
+use xPDO\Transport\xPDOTransport;
+use xPDO\Transport\xPDOScriptVehicle;
 
 class Ms3FirstTimeBuyerDiscountPackage
 {
@@ -46,6 +50,7 @@ class Ms3FirstTimeBuyerDiscountPackage
     {
         $this->runComposerInstall();
         $this->assets();
+        $this->encryptionSetup();
 
         $elements = scandir($this->config['elements']);
         foreach ($elements as $element) {
@@ -68,9 +73,13 @@ class Ms3FirstTimeBuyerDiscountPackage
             'target' => "return MODX_ASSETS_PATH . 'components/';",
         ]);
 
-        $resolvers = scandir($this->config['resolvers']);
+        $resolvers = array_filter(
+            scandir($this->config['resolvers']),
+            fn(string $r): bool => !in_array($r[0], ['_', '.'], true) && substr($r, -4) === '.php'
+        );
+        sort($resolvers);
         foreach ($resolvers as $resolver) {
-            if (in_array($resolver[0], ['_', '.'])) {
+            if ($resolver === 'resolve.encryption.php') {
                 continue;
             }
             if ($vehicle->resolve('php', ['source' => $this->config['resolvers'] . $resolver])) {
@@ -79,6 +88,14 @@ class Ms3FirstTimeBuyerDiscountPackage
         }
 
         $this->builder->putVehicle($vehicle);
+
+        if (!empty($this->config['encrypt'])) {
+            $this->builder->putVehicle($this->builder->createVehicle(
+                ['source' => $this->config['resolvers'] . 'resolve.encryption.php'],
+                ['vehicle_class' => xPDOScriptVehicle::class]
+            ));
+            $this->modx->log(modX::LOG_LEVEL_INFO, 'Added encryption resolver (for uninstall)');
+        }
         $this->builder->setPackageAttributes([
             'changelog' => file_get_contents($this->config['core'] . 'docs/changelog.txt'),
             'license' => file_get_contents($this->config['core'] . 'docs/license.txt'),
@@ -95,6 +112,56 @@ class Ms3FirstTimeBuyerDiscountPackage
             $this->install();
         }
         return $this->builder;
+    }
+
+    /**
+     * Setup encryption: add EncryptedVehicle class and resolver to package.
+     * Key retrieval happens inside EncryptedVehicle::put() via getKey().
+     */
+    private function encryptionSetup(): void
+    {
+        if (empty($this->config['encrypt'])) {
+            return;
+        }
+
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Encryption enabled.');
+
+        require_once $this->config['core'] . 'src/Transport/EncryptedVehicle.php';
+
+        $nameLower = $this->config['name_lower'];
+
+        $this->builder->package->put(
+            [
+                'source' => $this->config['core'] . 'src/Transport/EncryptedVehicle.php',
+                'target' => "return MODX_CORE_PATH . 'components/" . $nameLower . "/Transport/';",
+            ],
+            [
+                'vehicle_class' => xPDOFileVehicle::class,
+                xPDOTransport::UNINSTALL_FILES => false,
+            ]
+        );
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Added EncryptedVehicle class to package');
+
+        $this->builder->package->put(
+            [
+                'source' => $this->config['core'] . 'src/Transport/encryptedvehicle.class.php',
+                'target' => "return MODX_CORE_PATH . 'model/" . $nameLower . "/transport/';",
+            ],
+            [
+                'vehicle_class' => xPDOFileVehicle::class,
+                xPDOTransport::UNINSTALL_FILES => false,
+            ]
+        );
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Added EncryptedVehicle compatibility class to core/model');
+
+        $this->builder->putVehicle($this->builder->createVehicle(
+            ['source' => $this->config['resolvers'] . 'resolve.encryption.php'],
+            ['vehicle_class' => xPDOScriptVehicle::class]
+        ));
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Added encryption resolver');
+
+        $this->category_attributes['vehicle_class'] = 'Ms3FirstTimeBuyerDiscount\\Transport\\EncryptedVehicle';
+        $this->category_attributes[xPDOTransport::ABORT_INSTALL_ON_VEHICLE_FAIL] = true;
     }
 
     private function initialize(): void
@@ -129,12 +196,52 @@ class Ms3FirstTimeBuyerDiscountPackage
 
     private function assets(): void
     {
-        // Нет фронтовых сборок
+        $source = $this->config['core'] . 'assets/';
+        $target = $this->config['assets'];
+        if (!is_dir($source)) {
+            return;
+        }
+        if (!is_dir($target) && !mkdir($target, 0777, true) && !is_dir($target)) {
+            $this->modx->log(modX::LOG_LEVEL_ERROR, 'Could not create assets dir: ' . $target);
+            return;
+        }
+        $this->copyDir($source, $target);
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Synced component assets to public assets dir');
+    }
+
+    private function copyDir(string $source, string $target): void
+    {
+        $items = scandir($source);
+        if (!is_array($items)) {
+            return;
+        }
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $srcPath = $source . $item;
+            $dstPath = rtrim($target, '/\\') . '/' . $item;
+            if (is_dir($srcPath)) {
+                if (!is_dir($dstPath)) {
+                    mkdir($dstPath, 0777, true);
+                }
+                $this->copyDir($srcPath . '/', $dstPath . '/');
+                continue;
+            }
+            copy($srcPath, $dstPath);
+        }
     }
 
     private function settings(): void
     {
-        $settings = include($this->config['elements'] . 'settings.php');
+        $dataDir = $this->config['build'] . 'data/';
+        $transportFile = $dataDir . 'transport.settings.php';
+        if (!file_exists($transportFile)) {
+            $this->modx->log(modX::LOG_LEVEL_ERROR, 'Could not load transport.settings.php');
+            return;
+        }
+        $modx = $this->modx;
+        $settings = include $transportFile;
         if (!is_array($settings)) {
             $this->modx->log(modX::LOG_LEVEL_ERROR, 'Could not package in System Settings');
             return;
@@ -145,12 +252,7 @@ class Ms3FirstTimeBuyerDiscountPackage
             xPDOTransport::UPDATE_OBJECT => !empty($this->config['update']['settings']),
             xPDOTransport::RELATED_OBJECTS => false,
         ];
-        foreach ($settings as $name => $data) {
-            $setting = $this->modx->newObject(modSystemSetting::class);
-            $setting->fromArray(array_merge([
-                'key' => $this->config['name_lower'] . '_' . $name,
-                'namespace' => $this->config['name_lower'],
-            ], $data), '', true, true);
+        foreach ($settings as $setting) {
             $vehicle = $this->builder->createVehicle($setting, $attributes);
             $this->builder->putVehicle($vehicle);
         }
@@ -238,6 +340,37 @@ class Ms3FirstTimeBuyerDiscountPackage
         }
         $this->category->addMany($objects);
         $this->modx->log(modX::LOG_LEVEL_INFO, 'Packaged in ' . count($objects) . ' Plugins');
+    }
+
+    private function snippets(): void
+    {
+        $snippets = include $this->config['elements'] . 'snippets.php';
+        if (!is_array($snippets)) {
+            $this->modx->log(modX::LOG_LEVEL_ERROR, 'Could not load snippets.php');
+            return;
+        }
+        $this->category_attributes[xPDOTransport::RELATED_OBJECT_ATTRIBUTES]['Snippets'] = [
+            xPDOTransport::UNIQUE_KEY => 'name',
+            xPDOTransport::PRESERVE_KEYS => false,
+            xPDOTransport::UPDATE_OBJECT => !empty($this->config['update']['snippets']),
+            xPDOTransport::RELATED_OBJECTS => false,
+        ];
+        $objects = [];
+        foreach ($snippets as $name => $data) {
+            $snippet = $this->modx->newObject(modSnippet::class);
+            $snippet->fromArray(array_merge([
+                'name' => $name,
+                'description' => $data['description'] ?? '',
+                'snippet' => self::getFileContent($this->config['core'] . 'elements/snippets/' . ($data['file'] ?? $name) . '.php'),
+                'category' => 0,
+                'static' => !empty($this->config['static']['snippets']),
+                'source' => 1,
+                'static_file' => 'core/components/' . $this->config['name_lower'] . '/elements/snippets/' . ($data['file'] ?? $name) . '.php',
+            ], $data), '', true, true);
+            $objects[] = $snippet;
+        }
+        $this->category->addMany($objects);
+        $this->modx->log(modX::LOG_LEVEL_INFO, 'Packaged in ' . count($objects) . ' Snippets');
     }
 
     private static function getFileContent(string $filename): string

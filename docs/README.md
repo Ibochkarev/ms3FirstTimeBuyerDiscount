@@ -1,4 +1,4 @@
-# First-Time Buyer Discount — Документация
+# ms3FirstTimeBuyerDiscount — Документация
 
 Дополнение для MODX Revolution 3 и MiniShop3: автоматическая скидка на первый заказ пользователя (0 оплаченных заказов).
 
@@ -14,8 +14,8 @@
 
 ## Требования
 
-- **MODX Revolution** 3.x  
-- **PHP** 8.1+  
+- **MODX Revolution** >= 3.0.0
+- **PHP** >= 8.1.0
 - **MiniShop3** (события корзины, модель `msOrder`, настройка `ms3_status_for_stat`)
 
 ## Быстрый старт
@@ -36,7 +36,7 @@
 - **Управление → Настройки**: фильтр по области **ms3firsttimebuyerdiscount** (или поиск по `ftb_`).
 - Задайте:
   - **ftb_enabled** — включено (да).
-  - **ftb_discount_type** — «Процент» или «Фиксированная сумма».
+  - **ftb_discount_type** — текстовое поле: `percent` или `fixed`.
   - **ftb_discount_value** — например `10` (10%) или `500` (500 ₽ фикс).
 
 ### Шаг 4: Проверка
@@ -91,16 +91,16 @@
 
 ## Ключевые понятия
 
-- **First-Time Buyer** — пользователь с нулём заказов в статусах из `ms3_status_for_stat`.
-- **Скидка** применяется к стоимости корзины в событии **msOnGetCartCost**; результат возвращается через `returnedValues['cost']`.
-- **Расширяемость**: сервис в контейнере `ms3ftb_discount`, события **ftbOnBeforeApply** и **ftbOnApply** для отмены, подмены суммы и аналитики.
+- **First-Time Buyer** — пользователь с нулём оплаченных заказов (статусы из `ms3_status_for_stat`). Для гостей учёт по email/телефону из черновика заказа.
+- **Скидка** применяется в **msOnGetCartCost**; результат — `returnedValues['cost']`. Плашка на странице заказа: [Интеграция](integration.md#плашка-на-странице-заказа).
+- **Расширяемость:** сервис `ms3ftb_discount`, события **ftbOnBeforeApply** (отмена/подмена суммы), **ftbOnApply** (аналитика).
 
 ## Версионирование
 
-- Текущая версия пакета: **1.0.0-pl**.  
+- Текущая версия пакета: **1.0.0-pl**.
 - История изменений: [core/.../docs/changelog.txt](core/components/ms3firsttimebuyerdiscount/docs/changelog.txt).
 
 ## Ссылки
 
-- [MiniShop3 — документация](https://docs.modx.pro/components/minishop3/)  
+- [MiniShop3 — документация](https://docs.modx.pro/components/minishop3/)
 - [События MiniShop3 (стоимость)](https://docs.modx.pro/components/minishop3/development/events/cost)

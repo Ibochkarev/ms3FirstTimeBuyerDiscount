@@ -68,6 +68,8 @@ sequenceDiagram
 
 ## Проверка права на скидку (isEligible)
 
+Для авторизованных (`userId > 0`) считается число оплаченных заказов по `user_id`. Для гостей (`userId === 0`) — по email/телефону из `draft` (Address), если передан.
+
 ```mermaid
 flowchart TD
     Start([isEligible userId, draft])

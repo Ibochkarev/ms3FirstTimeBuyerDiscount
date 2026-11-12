@@ -23,6 +23,7 @@ class ComposerStaticInit7bddc73aae2dcda4a3418f4598d0158a
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Ms3FirstTimeBuyerDiscount\\Services\\FtbDiscountService' => __DIR__ . '/../..' . '/src/Services/FtbDiscountService.php',
+        'Ms3FirstTimeBuyerDiscount\\Transport\\EncryptedVehicle' => __DIR__ . '/../..' . '/src/Transport/EncryptedVehicle.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
